@@ -199,7 +199,7 @@ def export_summary(format):
     temp_dir = tempfile.mkdtemp()
     file_path = os.path.join(temp_dir, f'summary.{file_format}')
     
-    if file_format == 'pdf':
+    if file_format == 'pdf' or file_format == "xm":
         save_as_pdf(summary_text, file_path)
     elif file_format == 'docx':
         save_as_docx(summary_text, file_path)
