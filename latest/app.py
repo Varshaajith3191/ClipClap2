@@ -11,6 +11,7 @@ from googletrans import Translator
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
+# new line added
 
 # Load Whisper model
 model = whisper.load_model("base")
