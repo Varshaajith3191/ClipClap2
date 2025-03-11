@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Summary Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        input[type="file"], input[type="text"] {
+            margin-bottom: 20px;
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #video-container {
+            margin-bottom: 20px;
+        }
+        #uploaded-video, #youtube-video {
+            width: 100%;
+            height: 400px;
+            display: none;
+        }
+        #transcript, #summary {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .timestamp {
+            color: #007bff;
+            font-size: 0.9em;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        .timestamp:hover {
+            color: #0056b3;
+        }
+        button {
+            padding: 10px;
+            margin-right: 10px;
+            cursor: pointer;
+        }
+    </style>
+
+<style>
+    /* Initially hide transcript and summary sections */
+    #transcript, #summary ,#summary-length{
+        display: none;
+    }
+    #summary-length, #translation-language {
+    padding: 8px;
+    font-size: 16px;
+}
+#summary-length, #translation-language {
+    display: none; /* Hide these initially */
+}
+
+
+</style>
+
+</head>
+<body>
+    <div class="container">
+        <h1>Video Summary Generator</h1>
+        <input type="file" id="video" accept="video/*">
+        <input type="text" id="youtube_url" placeholder="Enter YouTube URL">
+       
+
+       
+        <button onclick="convertAudio()">Convert Audio</button> <!-- New Convert Audio Button -->
+      
+
+        <button id="upload-btn" onclick="uploadVideo()" style="display: none;">Upload and Generate Summary</button>
+        
+            <input type="number" id="summary-length" placeholder="Enter number of words for summary" min="10">
+           
+            <select id="translation-language">
+                <option value="">Select Language</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="hi">Hindi</option>
+                <option value="ml">Malayalam</option>
+            </select>
+      
+
+        <div id="video-container">
+            <video id="uploaded-video" controls>
+                <source id="video-source" src="" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <iframe id="youtube-video" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <div id="audio-container"></div>
+
+        <div id="transcript">
+            <h2>Transcript with Timestamps</h2>
+            <div id="transcript-content"></div>
+        </div>
+        
+        <!-- Summary -->
+        <div id="summary">
+            <h2>Summary with Timestamps</h2>
+            <div id="summary-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let uploadedVideo = document.getElementById('uploaded-video');
+        let youtubeVideo = document.getElementById('youtube-video');
+        let youtubePlayer;
+function uploadVideo() {
+        const fileInput = document.getElementById('video');
+        const youtubeUrlInput = document.getElementById('youtube_url');
+        const summaryLengthInput = document.getElementById('summary-length');
+        const translationLanguage = document.getElementById('translation-language').value;
+        const file = fileInput.files[0];
+        const youtubeUrl = youtubeUrlInput.value;
+        const summaryLength = summaryLengthInput.value; // Get the value
+
+        if (!file && !youtubeUrl) {
+            alert('Please select a video file or enter a YouTube URL.');
+            return;
+        }
+
+        const formData = new FormData();
+        if (file) {
+            formData.append('video', file);
+        } else if (youtubeUrl) {
+            formData.append('youtube_url', youtubeUrl);
+        }
+        formData.append('summary_length', summaryLength); // Add word limit to form data
+
+        if (translationLanguage) {
+        formData.append('translation_language', translationLanguage);
+    }
+
+
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+
+            if (file) {
+                uploadedVideo.style.display = 'block';
+                youtubeVideo.style.display = 'none';
+                document.getElementById('video-source').src = URL.createObjectURL(file);
+                uploadedVideo.load();
+            } else if (youtubeUrl) {
+                youtubeVideo.style.display = 'block';
+                uploadedVideo.style.display = 'none';
+                const videoId = getYouTubeVideoId(youtubeUrl);
+                youtubeVideo.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1`;
+
+                if (!youtubePlayer) {
+                    youtubePlayer = new YT.Player('youtube-video', {
+                        videoId: videoId
+                    });
+                } else {
+                    youtubePlayer.loadVideoById(videoId);
+                }
+            }
+
+            // Display transcript and summary only after data is received
+            document.getElementById('transcript').style.display = 'block';
+            document.getElementById('summary').style.display = 'block';
+
+            displayTranscript(data.transcript);
+            displaySummary(data.summary);
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+        function getYouTubeVideoId(url) {
+            const regex = /(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+            const match = url.match(regex);
+            return match ? match[1] : null;
+        }
+
+
+        function convertAudio() {
+    const fileInput = document.getElementById('video');
+    const youtubeUrlInput = document.getElementById('youtube_url');
+    const file = fileInput.files[0];
+    const youtubeUrl = youtubeUrlInput.value;
+    const uploadButton = document.getElementById('upload-btn'); // Define the upload button
+    const summaryLengthInput = document.getElementById('summary-length');
+    const translationLanguage = document.getElementById('translation-language');
+
+    const formData = new FormData();
+
+    if (file) {
+        formData.append('video', file);
+    } else if (youtubeUrl) {
+        formData.append('youtube_url', youtubeUrl);
+    } else {
+        alert('Please upload a video or enter a YouTube URL.');
+        return;
+    }
+
+    fetch('/convert-audio', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => { throw new Error(err.error); });
+        }
+        return response.blob();
+    })
+    .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        // Create or update the audio player inside the 'audio-container' div
+        let audioContainer = document.getElementById('audio-container');
+        audioContainer.innerHTML = ''; // Clear previous content
+
+        let audioPlayer = document.createElement('audio');
+        audioPlayer.id = 'audio-player';
+        audioPlayer.controls = true;
+        audioPlayer.src = url;
+
+        audioContainer.appendChild(audioPlayer);
+        audioPlayer.play();
+
+        // Show the Upload and Generate Summary button
+        uploadButton.style.display = "inline-block"; // Make the button visible
+
+         // Show the summary length input field
+      
+            summaryLengthInput.style.display = "block"; // Show the summary length input field
+            translationLanguage.style.display = "block"; 
+    })
+    
+    .catch(error => alert('Error: ' + error.message));
+}
+
+
+
+        function displayTranscript(transcript) {
+       
+
+            const transcriptContent = document.getElementById('transcript-content');
+            transcriptContent.innerHTML = '';
+
+            if (!transcript ⠟⠟⠞⠟⠵⠟⠟⠵⠟⠵⠺⠵⠞⠟⠺⠺⠵⠟⠞⠵⠞⠺⠵⠟⠟⠟⠟⠞⠟⠺⠵⠵⠺⠵⠺⠞⠟⠺⠺⠺⠵⠵⠺⠵⠵⠵⠟⠟⠞⠺⠺⠞⠺⠺⠟⠵⠟⠟⠵⠟⠞⠟⠞⠞⠟⠺⠺⠺⠟⠞⠺⠟⠵⠟⠵⠵⠵⠞⠞⠟⠞⠞⠟⠵⠺⠵⠺⠟⠵⠺⠺⠟⠟⠞⠺⠞⠞⠵⠵⠞⠵⠵⠺⠺⠟⠟⠟⠵⠟⠞⠵⠵⠺⠵⠞⠞⠞⠞⠵⠵⠺⠟⠞⠵⠟⠵⠟⠞⠺⠺⠞⠟⠟⠞⠵⠵⠺⠺⠟⠵⠟⠟⠵⠵⠞⠟⠵⠺⠺⠟⠺⠞⠟⠺⠞⠵⠵⠵⠟⠵⠟⠺⠟⠞⠞⠺⠟⠟⠺⠺⠵⠟⠞⠟⠟⠺⠵⠵⠞⠵⠺⠺⠵⠵⠵⠵⠺⠺⠺⠺⠞⠞⠺⠟⠟⠵⠵⠞⠵⠵⠟⠵⠺⠵⠟⠵⠞⠞⠺⠵⠺⠵⠺⠵⠺⠞⠟⠵⠟⠟⠵⠺⠵⠞⠺⠺⠵⠞⠵⠵⠵⠺⠺⠞⠟⠞⠟⠞⠟⠟⠞⠟⠞⠵⠵⠞⠞⠞⠟⠟⠺⠟⠟⠵⠟⠞⠺⠺⠺⠵⠵⠞⠵⠺⠟⠺⠵⠞⠵⠟⠞⠞⠺⠟⠺⠟⠺⠵⠺⠞⠟⠞⠞⠟⠟⠺⠺⠺⠟⠵⠺⠟⠵⠟⠟⠵⠵⠟⠺⠞⠵⠵⠵⠵⠞⠟⠟⠺⠺⠟⠟⠵⠺⠵⠟⠞⠟⠟⠵⠵⠺⠵⠟⠺⠞⠵⠞⠞⠞⠟⠟⠞⠞⠺⠵⠺⠞⠞⠞⠵⠞⠞⠞⠟⠞⠺⠺⠟⠟⠺⠞⠟⠟⠞⠵⠵⠞⠵⠺⠺⠞⠺⠺⠵⠵⠞⠟⠞⠺⠵⠺⠵⠺⠵⠞⠟⠟⠵⠵⠞⠟⠟⠞⠺⠞⠞⠞⠞⠺⠵⠞⠟⠺⠟⠵⠵⠞⠺⠺⠟⠟⠵⠟⠞⠺⠞⠞⠟⠞⠺⠞⠞⠵⠞⠞⠞⠟⠞⠵⠵⠺⠺⠵⠟⠵⠟⠟⠵⠺⠟⠞⠞⠺⠞⠟⠺⠵⠟⠺⠞⠺⠺⠟⠞⠵⠞⠵⠟⠵⠟⠺⠟⠟⠺⠟⠟⠟⠺⠺⠞⠵⠵⠺⠵⠟⠵⠞⠵⠵⠵⠞⠟⠟⠺⠺⠟⠞⠞⠞⠵⠟⠺⠟⠺⠟⠺⠞⠺⠞⠞⠟⠞⠞⠺⠺⠞⠵⠺⠺⠟⠞⠞⠵⠟⠵⠞⠟⠺⠵⠞⠞⠵⠺⠵⠞⠺⠟⠺⠟⠵⠵⠵⠞⠟⠟⠵⠟⠵⠟⠵⠵⠞⠺⠟⠟⠟⠵⠟⠺⠺⠵⠺⠟⠟⠟⠟⠵⠞⠺⠵⠟⠺⠵⠟⠺⠺⠟⠺⠞⠺⠺⠟⠺⠟⠵⠟⠵⠟⠟⠟⠟⠞⠞⠟⠺⠟⠵⠵⠟⠺⠟⠞⠵⠟⠞⠺⠞⠵⠺⠵⠟⠞⠟⠟⠟⠟⠺⠞⠵⠺⠟⠵⠟⠟⠟⠵⠞⠟⠞⠺⠵⠺⠞⠺⠞⠵⠞⠟⠟⠺⠞⠺⠺⠞⠵⠞⠵⠵⠺⠞⠟⠟⠵⠞⠟⠞⠵⠟⠵⠞⠵⠵⠺⠞⠟⠟⠟⠞⠺⠟⠺⠞⠟⠵ summary.length === 0) {
+        summaryContent.innerHTML = "<p>No summary available.</p>";
+        return;
+    }
+
+    // Display the summary text with timestamps (or just summary text)
+    summaryContent.innerHTML = <p>${summary}</p>;
+}
+
+
+        function seekToTime(timestamp) {
+            const parts = timestamp.split(':');
+            const seconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+
+            if (uploadedVideo.style.display === 'block') {
+                uploadedVideo.currentTime = seconds;
+                uploadedVideo.play();
+            } else if (youtubeVideo.style.display === 'block' && youtubePlayer) {
+                youtubePlayer.seekTo(seconds, true);
+                youtubePlayer.playVideo();
+            }
+        }
+
+       
+
+
+        // Load YouTube API script
+        const script = document.createElement('script');
+        script.src = "https://www.youtube.com/iframe_api";
+        document.body.appendChild(script);
+    </script>
+</body>
+</html>
