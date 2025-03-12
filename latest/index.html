@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClipCap - AI Video Summarizer</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://unpkg.com/aos@next/dist/aos.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:ital@1&family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+</head>
+
+
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let videoInput = document.getElementById("videoUpload");
+        let videoNameDisplay = document.getElementById("video-name");
+        let selectedVideoInfo = document.getElementById("selected-video-info");
+        let removeVideoButton = document.getElementById("remove-video");
+        let videoPreview = document.getElementById("video-preview");
+    
+        if (videoInput) {
+            videoInput.addEventListener("change", function (event) {
+                let file = event.target.files[0];
+                if (file) {
+                    let videoURL = URL.createObjectURL(file);
+                    videoPreview.src = videoURL;
+                    videoPreview.style.display = "block";
+                    videoNameDisplay.textContent = file.name;
+                    selectedVideoInfo.style.display = "flex";
+                }
+            });
+        }
+    
+        if (removeVideoButton) {
+            removeVideoButton.addEventListener("click", function () {
+                videoInput.value = "";
+                videoNameDisplay.textContent = "";
+                selectedVideoInfo.style.display = "none";
+                videoPreview.src = "";
+            });
+        }
+
+        // Handle form submission
+    document.getElementById("uploadForm").addEventListener("submit", function (event) {
+        event.preventDefault();
+
+        let formData = new FormData(this);
+        // let ai_Choice = document.getElementById("ai_Choice").value;
+        formData.append("ai_Choice", ai_Choice);
+
+        fetch("/process_video", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.transcription_text) {
+                fetch(`/transcribe_audio?audio_file=${data.audio_file}&ai_Choice=${ai_Choice}`)
+                .then(response => response.json())
+                .then(summaryData => {
+                    document.getElementById("result").innerHTML = 
+                        `<p><strong>Summary:</strong> ${summaryData.summary_text}</p>`;
+                });
+            }
+        })
+        .catch(error => console.error("Error:", error));
+    });
+});
+
+
+    </script>
+
+<body>
+  <header>
+    <div class="logo-container">
+        <img src="/static/img/logo7.png" alt="ClipCap Logo" class="logo">
+    </div>
+    <div class="auth-buttons">
+      <ul class="main-nav">
+        <li><a href="#abc">How it Works</a></li>
+        <li><a href="#hiw">Review</a></li>
+        <a href="{{ url_for('login') }}"><button>LOGIN</button></a>
+        <a href="{{ url_for('signup') }}"><button>SIGNUP</button></a>
+      </ul>
+    </div>
+</header>
+
+<section class="features" data-aos="fade-in" data-aos-duration="2000" >
+<div class="hero">
+  <h1>Welcome to ClipCap</h1>
+  <p>The ultimate AI video summarizer. Upload your video or provide a URL, and let ClipCap do the magic for you!</p>
+  <a class="btn btn-full" href="#video">Get Started</a>
+</div>
+</section>
+
+
+<section class="section"  data-aos="fade-in" data-aos-duration="2000" id="abc"  >
+<div class="services-section" >
+  <h2>How it works </h2>
+  <div class="services-container" >
+      <div class="service-card">
+          <h3>Video to Audio Conversion</h3>
+          <p>Easily convert videos into audio files for convenient use and download.</p>
+      </div>
+      <div class="service-card">
+          <h3>Audio to Text Conversion</h3>
+          <p>Transform audio into text effortlessly for documentation or reference.</p>
+      </div>
+      <div class="service-card">
+          <h3>Text to Summary Conversion</h3>
+          <p>Generate concise summaries and download them as DOCX or PDF files for easy sharing.</p>
+      </div>
+      <div class="service-card">
+          <h3>Translation of Summary</h3>
+          <p>Translate summaries into different languages quickly, bridging communication gaps.</p>
+      </div>
+  </div>
+</div>
+</section>
+
+<section class="upload" data-aos="fade-in" data-aos-duration="2000" id="video" >
+  <main>
+  <h4>Ready to get started? Upload your video now and let ClipCap help you summarize the key moments in just seconds!</h4>
+    <div class="container" id="video"  style="margin-top: 50px">
+    
+      <form action="/process_video" method="post" class="form-wrapper" enctype="multipart/form-data">
+          <label for="videoUpload" class="upload-icon">
+            <img src="/static/pin-icon.svg" alt=" ">
+          </label>
+          <input type="file" id="videoUpload" name="videoUpload" accept="video/*" style="display:none;">
+          <input type="url" id="videoUrl" name="videoUrl" placeholder="Enter YouTube URL, or Upload Your Own Video">
+          
+           <!-- AI Selection Dropdown -->
+           <!-- <label for="ai_Choice">Choose AI Model:</label>
+           <select id="ai_Choice" name="ai_Choice">
+               <option value="huggingface">Hugging Face</option>
+               <option value="gemini">Gemini AI</option>
+               <option value="groq">Groq</option>
+           </select> -->
+          
+          <button type="submit">Convert</button>
+      </form>
+      
+      <!-- Display selected video info -->
+      <div id="selected-video-info" class="video-info" style="display: none;">
+        <video id="video-preview" class="video-preview" controls></video>
+        <div class="video-details">
+          <p id="video-name"></p>
+          <button id="remove-video" class="remove-btn">❌ Remove</button>
+        </div>
+        
+      </div>
+
+      <div id="result"></div>
+    </div>
+  </main>
+  </section>
+
+<section class="section-testimonials" style="
+padding-top: 88px;
+padding-bottom: 60px;"  data-aos="fade-in" data-aos-duration="2000" id="hiw">
+    <div>
+      <h2>What Users Are Saying About Our Video Summarizer</h2>
+    <div class="row">
+        <div class="col-span_1_of_3">
+            <blockquote>
+              This tool is a game-changer! I upload lengthy webinar recordings and get concise, 
+              accurate summaries in minutes. The transcription quality is excellent, and I love 
+              the customization options for summaries. It saves me hours of effort every week.
+               Highly recommended!
+                <cite><img src="/static/img/c1.jpg" alt="cus1">Alberto Duna</cite>
+            </blockquote>
+        </div>
+
+        <div class="col-span_1_of_3">
+            <blockquote>
+              The video summarizer is very effective and easy to use. The interface is clean, 
+              and the results are impressive. The only suggestion would be to improve the translation
+               accuracy for non-English videos, but overall, a great product!
+                <cite><img src="/static/img/c2.jpg" alt="c2">Joana Silva</cite>
+            </blockquote>
+        </div>
+
+        <div class="col-span_1_of_3">
+            <blockquote>
+              This website makes content management so much easier! The ability to transcribe, 
+              summarize, and export is perfect for my workflow. Plus, the alerts via email for 
+              completed tasks are super convenient. It's worth every penny!
+                <cite><img src="//static/img/c3.jpg" alt="cus3">Alberto Duna</cite>
+            </blockquote>
+        </div>
+        </div>
+    </div>
+</section>
+
+<footer style="
+padding-top: 30px;
+        padding-bottom: 70px; ">
+          <div class="row">
+          
+            <p>Copyright &copy; 2024 by Clip Clap. All rights reserved.</p>
+
+        </div>
+       
+            
+        
+        </footer>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+        <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+        <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+        <script src="https://unpkg.com/aos@next/dist/aos.js"></script>
+        <script>
+          AOS.init();
+        </script>
+        <script>
+            $(document).ready(function(){
+              // Add smooth scrolling to all links
+              $("a").on('click', function(event) {
+            
+                // Make sure this.hash has a value before overriding default behavior
+                if (this.hash !== "") {
+                  // Prevent default anchor click behavior
+                  event.preventDefault();
+            
+                  // Store hash
+                  var hash = this.hash;
+            
+                  // Using jQuery's animate() method to add smooth page scroll
+                  // The optional number (800) specifies the number of milliseconds it takes to scroll to the specified area
+                  $('html, body').animate({
+                    scrollTop: $(hash).offset().top
+                  }, 800, function(){
+            
+                    // Add hash (#) to URL when done scrolling (default click behavior)
+                    window.location.hash = hash;
+                  });
+                } // End if
+              });
+            });
+            </script>
+         
+    </body>
+</html>
