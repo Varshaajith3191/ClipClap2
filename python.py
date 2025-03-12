@@ -9,6 +9,9 @@ from docx import Document
 import tempfile
 from googletrans import Translator
 
+
+
+
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 
