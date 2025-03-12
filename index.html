@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Transcription</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="logo-container">
+            <img src="logo.png" class="logo" alt="Logo">
+        </div>
+        <div class="auth-buttons">
+            <button>Login</button>
+            <button>Signup</button>
+        </div>
+    </header>
+
+    <main>
+        <h2>Audio Output</h2>
+        <audio controls>
+            <source src="audio.mp3" type="audio/mp3">
+            Your browser does not support the audio element.
+        </audio>
+
+        <div class="button-group">
+            <button class="btn-full">Download Audio</button>
+            <button class="btn-full">Transcribe Audio</button>
+            <button class="btn-full" onclick="summarizeText()">Summarize</button>
+        </div>
+
+        <textarea id="transcription" rows="10" readonly>
+            So what's new, Mark? How is your new job going? To be honest, I can't complain. I really love the company that I am working for...
+        </textarea>
+    </main>
+
+    <script>
+        function summarizeText() {
+            let text = document.getElementById("transcription").value;
+            sessionStorage.setItem("fullText", text);
+            window.location.href = "summary.html";
+        }
+    </script>
+</body>
+</html>
